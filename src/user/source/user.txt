@@ -1,0 +1,48 @@
+🟢 Публичные действия (для обычного пользователя)
+Метод	Тип доступа	Описание
+getProfile(userId)	Public	Получить информацию о себе (/users/me)
+updateProfile(userId, dto)	Public	Обновить имя и аватар (displayName, pictureUrl)
+
+🛡 Админ-действия
+Метод	Тип доступа	Описание
+createUser(dto, isAdmin)	Admin	Создать пользователя от имени администратора
+updateUser(id, dto)	Admin	Обновить произвольного пользователя
+deleteUser(id)	Admin	Пометить как DELETED
+setRole(id, role)	Admin	Назначить роль (user, admin)
+setStatus(id, status)	Admin	Изменить статус (ACTIVE, SUSPENDED и т.д.)
+findMany(query)	Admin	Получить список всех пользователей с фильтрами, пагинацией
+
+| Метод    | URL                             | Кто имеет доступ | Описание                         |
+| -------- | ------------------------------- | ---------------- | -------------------------------- |
+| `GET`    | `/user/me/sessions`             | user             | Получить все свои сессии         |
+| `GET`    | `/user/:id/sessions`            | admin            | Получить все сессии пользователя |
+| `DELETE` | `/user/me/sessions/:sessionId`  | user             | Удалить свою сессию              |
+| `DELETE` | `/user/:id/sessions/:sessionId` | admin            | Удалить сессию пользователя      |
+
+| Этап | Эндпоинт                     | Описание                            |
+| ---- | ---------------------------- | ----------------------------------- |
+| 1️⃣  | `POST /users/me/2fa/setup`   | Генерация секрета + QR (base64 PNG) |
+| 2️⃣  | `POST /users/me/2fa/verify`  | Подтверждение кода и активация      |
+| 3️⃣  | `POST /users/me/2fa/disable` | Отключение 2FA                      |
+
+
+
+🛠 Internal методы (внутреннее использование, не контроллер)
+Метод	Тип доступа	Описание
+findById(id)	Internal	Найти пользователя по ID
+findByEmail(email)	Internal	Найти по email
+findByUsername(username)	Internal	(если используешь username)
+findByVerificationToken(token)	Internal	Найти по email verification токену
+findByResetPasswordToken(token)	Internal	Найти по reset токену
+updateSensitiveFields()	Internal	Обновить hash, emailVerified и т.п.
+isEmailTaken(email)	Internal	Проверка на уникальность email
+isUsernameTaken(username)	Internal	Проверка на уникальность username
+getPublicProfile(id)	Internal	Вернуть только публичную часть профиля (для логов, отображения и т.д.)
+
+🔒 Примеры защиты
+Метод	Guard
+getProfile()	AtGuard
+updateProfile()	AtGuard
+createUser() (админ)	AtGuard + RolesGuard(admin)
+setRole() / setStatus()	AtGuard + RolesGuard(admin)
+deleteUser()	AtGuard + RolesGuard(admin)

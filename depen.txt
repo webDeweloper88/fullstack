@@ -1,0 +1,68 @@
+#config
+npm install --save @nestjs/config
+npm i --save class-validator class-transformer
+npm install --save @nestjs/swagger swagger-ui-express
+
+#prisma
+Шаг 1. Установить Prisma и необходимые пакеты
+npm install prisma --save-dev
+npm install @prisma/client
+Шаг 2. Инициализация Prisma
+npx prisma init
+ Шаг 3. Вставь схему (schema.prisma)
+Открой файл prisma/schema.prisma и замени его содержимое на ту схему, которую я тебе дал выше (с User, Session, AccessLog, OAuthAccount и enum'ами).
+Шаг 4. Сгенерируй клиент и создай миграцию
+npx prisma migrate dev --name init
+npx prisma migrate dev --name change_id_to_uuid
+ Шаг 5. Подключи Prisma в NestJS
+ //npm install @nestjs/prisma
+ Создай файл prisma.service.ts:
+
+ npm i prettier-plugin-prisma
+ 
+ 
+
+ #JWT module
+npm install --save @nestjs/jwt
+#JWT Strategies
+npm install --save @nestjs/passport passport passport-jwt
+npm install --save-dev @types/passport-jwt
+#dlya heshirovaniya
+npm install bcrypt
+npm install --save-dev @types/bcrypt
+
+#TwoFactorAuthService 
+npm install speakeasy qrcode
+npm install --save-dev @types/qrcode
+npm install --save-dev @types/speakeasy
+
+#mail
+npm install nodemailer
+npm install --save-dev @types/nodemailer
+npm install handlebars
+
+# redis
+npm install ioredis
+
+
+#dlya logina 
+npm i cookie-parser
+npm i -D @types/cookie-parser
+
+npm install ms    
+npm i -D @types/ms
+
+#session 
+npm install dayjs
+npm install --save-dev @types/dayjs
+npm i ua-parser-js
+
+udaleniya prosrochennix sesiya sherez @cron 
+npm install @nestjs/schedule
+
+
+#OAuthAccount
+npm i passport-google-oauth20
+npm i --save-dev @types/passport-google-oauth20
+#yandex
+npm install passport-yandex

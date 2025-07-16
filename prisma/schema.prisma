@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String  @id @default(uuid()) @map("user_id")
+  email       String  @unique
+  displayName String? @map("display_name")
+  picktureUrl String? @map("picture_url")
+
+  hash   String   @map("password_hash")
+  hashRt String?  @map("refresh_token")
+  role   UserRole @default(user) @map("user_role")
+
+  accountStatus                   AccountStatus @default(PENDING) @map("account_status")
+  emailVerified                   Boolean       @default(false) @map("email_verified")
+  emailVerificationToken          String?       @map("email_verification_token")
+  emailVerificationTokenExpiresAt DateTime?     @map("email_verification_token_expires_at")
+  resetPasswordToken              String?       @map("reset_password_token")
+  resetPasswordExpiresAt          DateTime?     @map("reset_password_expires_at")
+
+  twoFactorEnabled   Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret    String?   @map("two_factor_secret")
+  twoFactorExpiresAt DateTime? @map("two_factor_expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  accessLogs   AccessLog[]    @relation(name: "UserAccessLogs")
+  Session      Session[]
+  OAuthAccount OAuthAccount[]
+
+  @@map("users") // Имя таблицы
+}
+
+model Session {
+  id        String  @id @default(uuid()) @map("session_id")
+  userId    String  @map("user_id")
+  ipAddress String  @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  device   String? @map("device") // Например: "Windows 10 · Chrome 138"
+  client   String? @map("client") // Например: "web", "mobile", "desktop"
+  location String? @map("location") // Например: "Tashkent, Uzbekistan"
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  expiresAt DateTime @map("expires_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model AccessLog {
+  id        String       @id @default(uuid()) @map("access_log_id")
+  userId    String       @map("user_id")
+  eventType LogEventType @map("event_type")
+  ipAddress String?      @map("ip_address")
+  userAgent String?      @map("user_agent")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  user User? @relation(name: "UserAccessLogs", fields: [userId], references: [id])
+
+  @@map("access_logs")
+}
+
+model OAuthAccount {
+  id           String  @id @default(uuid()) @map("oauth_account_id")
+  provider     String // 'google', 'github', и т.д.
+  providerId   String // ID пользователя в системе провайдера
+  email        String? // email, полученный от OAuth
+  accessToken  String?
+  refreshToken String?
+  userId       String  @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@map("oauth_accounts")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum AccountStatus {
+  PENDING // пользователь не подтвердил email
+  ACTIVE // подтверждён и активен
+  BLOCKED // временно заблокирован
+  DELETED // удалён (не имеет доступа)
+}
+
+enum LogEventType {
+  REGISTER
+  LOGIN_SUCCESS
+  LOGIN_FAIL
+  EMAIL_VERIFIED
+  EMAIL_RESEND
+  EMAIL_FAILED
+  PASSWORD_CHANGED
+  ACCOUNT_BLOCKED
+  ACCOUNT_UNLOCKED
+  LOGIN_2FA_REQUIRED
+  ENABLE_2FA
+  DISABLE_2FA
+  LOGOUT
+  LOGIN_OAUTH_SUCCESS // Вход через OAuth
+  LOGIN_OAUTH_FAIL // Ошибка входа через OAuth
+  OAUTH_DISCONNECT // Отключение OAuth
+  PASSWORD_SET_OAUTH_SUCCESS // Установка пароля
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <title>Swagger UI: OAuth2 Redirect</title>
+  </head>
+  <body>
+    <script>
+      'use strict';
+      function run() {
+        var oauth2 = window.opener.swaggerUIRedirectOauth2;
+        var sentState = oauth2.state;
+        var redirectUrl = window.location.href;
+
+        var qp = {};
+        if (redirectUrl.indexOf('?') > -1) {
+          var queryString = redirectUrl.split('?')[1];
+          var pairs = queryString.split('&');
+          for (var i = 0; i < pairs.length; i++) {
+            var kv = pairs[i].split('=');
+            qp[kv[0]] = kv[1];
+          }
+        }
+
+        if (qp.state !== sentState) {
+          oauth2.errCb({ message: 'State mismatch' });
+          return;
+        }
+
+        if (qp.code) {
+          oauth2.callback({ code: qp.code });
+        } else {
+          oauth2.errCb({ message: 'Authorization code not found' });
+        }
+
+        window.close();
+      }
+
+      run();
+    </script>
+  </body>
+</html>
