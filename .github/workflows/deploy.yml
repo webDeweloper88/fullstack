@@ -1,4 +1,4 @@
-name: Deploy to Code-Server via SSH
+name: Deploy
 
 on:
   push:
@@ -7,19 +7,12 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-
+    runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: 100.118.93.82 # или IP, если DNS не работает
-          username: homelab
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            cd /home/homelab/docker/code-server/config/workspace/projects/auth
-            git pull origin main
+      - name: Deploy to homelab
+        run: |
+          cd /home/homelab/docker/code-server/config/workspace/projects/auth
+          git pull origin main
