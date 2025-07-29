@@ -58,7 +58,7 @@ export class AuthService {
 
     // 3. Генерация verificationToken и его срок действия
     const emailVerificationToken = randomUUID();
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 10); // 10 минут
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 час
 
     // 4. Создание пользователя
     const user = await this.userService.createUserInternal({
@@ -96,6 +96,7 @@ export class AuthService {
   ): Promise<{ message: string }> {
     const user = await this.userService.findByEmailVerificationToken(token);
 
+    console.log('[user found]', user?.id);
     if (!user) {
       throw new NotFoundException(USER_ERRORS.EMAIL_VERIFICATION_TOKEN_INVALID);
     }
