@@ -16,7 +16,7 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: code.domlab.uz # или IP, если DNS не работает
+          host: 100.118.93.82 # или IP, если DNS не работает
           username: homelab
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
