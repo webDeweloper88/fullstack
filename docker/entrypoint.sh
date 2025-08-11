@@ -1,15 +1,17 @@
 #!/usr/bin/env sh
 set -e
 
-# Ожидание БД, если нужно (необязательно, но полезно в первый запуск)
+PRISMA="./node_modules/.bin/prisma"
+
 if [ -n "$DATABASE_URL" ]; then
   echo "Waiting for database..."
-  # Простейший ожидатель: 30 попыток
   i=0
-  until npx prisma db execute --schema=./prisma/schema.prisma --command "SELECT 1;" >/dev/null 2>&1; do
+  until $PRISMA db execute --schema=./prisma/schema.prisma --command "SELECT 1;" >/dev/null 2>&1; do
     i=$((i+1))
     if [ $i -gt 30 ]; then
-      echo "Database not reachable, giving up."
+      echo "Database not reachable, giving up." >&2
+      # Покажем попытку подключения (без пароля) для дебага:
+      echo "Tried DATABASE_URL host: $(echo "$DATABASE_URL" | sed -E 's#.+@([^:/]+).*#\1#')" >&2
       exit 1
     fi
     sleep 2
@@ -17,7 +19,7 @@ if [ -n "$DATABASE_URL" ]; then
 fi
 
 echo "Running prisma migrate deploy..."
-npx prisma migrate deploy
+$PRISMA migrate deploy
 
 echo "Starting app..."
 node dist/main.js

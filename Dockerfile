@@ -25,23 +25,18 @@ COPY src ./src
 # COPY public ./public
 
 # Генерируем Prisma Client
-RUN npx prisma generate
-
-# Сборка NestJS без локального @nestjs/cli
-RUN npx --yes @nestjs/cli@^10.0.0 build
-
 # ---------- Runner ----------
 FROM base AS runner
 RUN addgroup -S app && adduser -S app -G app
 USER app
 
-COPY --from=deps /app/node_modules ./node_modules
+# ВАЖНО: берем node_modules из builder, чтобы был prisma CLI
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
 COPY docker/entrypoint.sh ./entrypoint.sh
 
-# Healthcheck (при желании поменяй порт/путь)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget -qO- http://127.0.0.1:${PORT:-3000}/health || exit 1
 
