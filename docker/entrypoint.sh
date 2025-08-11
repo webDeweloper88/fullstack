@@ -6,8 +6,8 @@ PRISMA="./node_modules/.bin/prisma"
 if [ -n "$DATABASE_URL" ]; then
   echo "Waiting for database..."
   i=0
-  # снимаем редирект ошибок, чтобы увидеть причину
-  until $PRISMA db execute --schema=./prisma/schema.prisma --command "SELECT 1;"; do
+  # Prisma 6: передаём SQL через stdin
+  until echo "SELECT 1;" | $PRISMA db execute --url "$DATABASE_URL" --stdin; do
     i=$((i+1))
     if [ $i -gt 30 ]; then
       echo "Database not reachable, giving up." >&2
