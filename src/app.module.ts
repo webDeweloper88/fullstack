@@ -30,9 +30,9 @@ import { HealthController } from './health/health.controller';
     AccessLogModule,
     SessionModule,
     OauthModule,
-    HealthController
+    
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [],
 })
 export class AppModule {}
