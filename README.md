@@ -21,6 +21,7 @@ NestJS асосидаги аутентификация хизмати: **JWT (ac
 - Логин → access (қисқа TTL) + refresh (Redis, TTL)
 - Refresh орқали янгилаш, Logout ва Logout All
 - `GET /users/me` ва сессиялар билан ишлаш (`/users/me/sessions`)
+- **Ихтиёрий:** OAuth (Google/Yandex) — аккаунтга ташқи провайдер орқали кириш
 - Swagger: https://dev-auth.domlab.uz/api
 
 ---
@@ -33,9 +34,10 @@ Production-ready authentication service built with **NestJS + Prisma + PostgreSQ
 - Login with access/refresh tokens; refresh stored in Redis with TTL
 - Token refresh, logout current device, logout all devices
 - Session list & revoke by ID
+- Optional **OAuth (Google/Yandex)** login
 - Clean DTOs & validation; centralized error format (planned)
 
-> **Roadmap:** 2FA (TOTP), OAuth providers, rate-limit & brute-force protection, refresh rotation.
+> **Roadmap:** 2FA (TOTP), rate-limit & brute-force protection, refresh rotation, OAuth account linking & safe disconnect.
 
 ---
 
@@ -80,6 +82,9 @@ Production-ready authentication service built with **NestJS + Prisma + PostgreSQ
 - `GET  /users/me` — current user profile
 - `GET  /users/me/sessions` — list sessions
 - `DELETE /users/me/sessions/:id` — revoke a session by ID
+- **(Optional)** `GET /oauth/google` → `GET /oauth/google/callback`
+- **(Optional)** `GET /oauth/yandex` → `GET /oauth/yandex/callback`
+- **(Optional)** `DELETE /oauth/disconnect/:provider`
 
 > Full swagger: https://dev-auth.domlab.uz/api
 
@@ -118,7 +123,46 @@ APP_BASE_URL=http://localhost:3000
 CLIENT_BASE_URL=http://localhost:5173
 EMAIL_VERIFY_URL=${CLIENT_BASE_URL}/auth/verify-email
 PASSWORD_RESET_URL=${CLIENT_BASE_URL}/auth/reset-password
+
+# --- OAuth (Google) ---
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+# e.g. http://localhost:3000/oauth/google/callback or https://dev-auth.domlab.uz/oauth/google/callback
+GOOGLE_REDIRECT_URI=${APP_BASE_URL}/oauth/google/callback
+# Scopes are usually managed in code; keep for clarity if needed
+GOOGLE_SCOPE="openid email profile"
+
+# --- OAuth (Yandex) ---
+YANDEX_CLIENT_ID=your_yandex_client_id
+YANDEX_CLIENT_SECRET=your_yandex_client_secret
+# e.g. http://localhost:3000/oauth/yandex/callback or https://dev-auth.domlab.uz/oauth/yandex/callback
+YANDEX_REDIRECT_URI=${APP_BASE_URL}/oauth/yandex/callback
+# Yandex scopes example
+YANDEX_SCOPE="login:email"
 ```
+
+---
+
+## OAuth setup (Google & Yandex)
+**Google**
+1. Go to Google Cloud Console → APIs & Services → OAuth consent screen (External) → add test users (dev).
+2. Create Credentials → **OAuth client ID** → Application type: **Web application**.
+3. Add **Authorized redirect URIs**:  
+   - `http://localhost:3000/oauth/google/callback`  
+   - `https://dev-auth.domlab.uz/oauth/google/callback` (dev)  
+   - `https://auth.domlab.uz/oauth/google/callback` (prod, if applicable)
+4. Put values into `.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
+
+**Yandex**
+1. Go to Yandex OAuth (oauth.yandex.ru) → Create application (Веб‑сервисы).
+2. Add **Redirect URI**:  
+   - `http://localhost:3000/oauth/yandex/callback`  
+   - `https://dev-auth.domlab.uz/oauth/yandex/callback`  
+   - `https://auth.domlab.uz/oauth/yandex/callback` (prod, if applicable)
+3. Choose scope(s), at minimum: `login:email`.
+4. Put values into `.env`: `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`, `YANDEX_REDIRECT_URI`.
+
+> Ensure your Nest strategies use these env vars and the callback routes above. Adjust if your routes differ.
 
 ---
 
@@ -173,6 +217,7 @@ docker compose logs -f api
 - [ ] Enforce strong password policy & validation
 - [ ] Rotate secrets & never commit `.env`
 - [ ] Enable CORS with allowlist
+- [ ] Safe OAuth linking/unlink (do not allow removal of the last auth method)
 
 ---
 
@@ -184,7 +229,7 @@ docker compose logs -f api
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "build": "nest build",
-    "lint": "eslint "{src,apps,libs,test}/**/*.ts" --fix",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
