@@ -11,6 +11,7 @@ import { AccessLogModule } from './access-log/access-log.module';
 import { SessionModule } from './session/session.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OauthModule } from './oauth/oauth.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { OauthModule } from './oauth/oauth.module';
     AccessLogModule,
     SessionModule,
     OauthModule,
+    HealthController
   ],
   controllers: [],
   providers: [],
