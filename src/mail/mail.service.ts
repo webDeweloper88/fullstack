@@ -1,9 +1,5 @@
 // src/mail/mail.service.ts
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import * as handlebars from 'handlebars';
@@ -17,74 +13,72 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
   private templateCache = new Map<string, HandlebarsTemplateDelegate>();
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(private readonly config: ConfigService) {
+    // ������ Убедись, что эти значения реально boolean/number
+    const port = Number(this.config.get('MAIL_PORT'));
+    const secure = String(this.config.get('MAIL_SECURE')).toLowerCase() === 'true';
+
     this.transporter = nodemailer.createTransport({
-      host: this.configService.getOrThrow<string>('MAIL_HOST'),
-      port: this.configService.getOrThrow<number>('MAIL_PORT'),
-      secure: this.configService.getOrThrow<boolean>('MAIL_SECURE'),
+      host: this.config.getOrThrow<string>('MAIL_HOST'),
+      port,
+      secure,
       auth: {
-        user: this.configService.getOrThrow<string>('MAIL_USER'),
-        pass: this.configService.getOrThrow<string>('MAIL_PASS'),
+        user: this.config.getOrThrow<string>('MAIL_USER'),
+        pass: this.config.getOrThrow<string>('MAIL_PASS'),
       },
     });
   }
 
   async sendMail(options: SendMailOptions): Promise<void> {
-    const html = await this.compileTemplate(
-      options.templateName,
-      options.context,
-    );
-
+    const html = await this.compileTemplate(options.templateName, options.context);
     try {
       await this.transporter.sendMail({
-        from: this.configService.getOrThrow<string>('MAIL_FROM'),
+        from: this.config.getOrThrow<string>('MAIL_FROM'),
         to: options.to,
         subject: options.subject,
         html,
       });
-      this.logger.log(
-        `Email sent to ${options.to} — subject: ${options.subject}`,
-      );
+      this.logger.log(`Email sent to ${options.to} — subject: ${options.subject}`);
     } catch (error) {
       this.logger.error(`Failed to send email to ${options.to}`, error.stack);
       throw new InternalServerErrorException('Ошибка при отправке письма');
     }
   }
 
-  private async compileTemplate(
-    templateName: string,
-    context: any,
-  ): Promise<string> {
-    if (!this.templateCache.has(templateName)) {
-      // ✅ Путь из корня проекта, а не __dirname (dist/)
-      const filePath = path.resolve(
-        process.cwd(),
-        'src',
-        'mail',
-        'templates',
-        `${templateName}.hbs`,
-      );
+  private async compileTemplate(templateName: string, context: any): Promise<string> {
+    // 1) dist: .../dist/mail/templates/<name>.hbs  (в проде)
+    // 2) src : .../src/mail/templates/<name>.hbs   (локально)
+    // 3) MAIL_TEMPLATES_DIR=<путь> (если хочешь переопределять)
+    const candidates = [
+      path.join(__dirname, 'templates', `${templateName}.hbs`),
+      path.resolve(process.cwd(), 'src', 'mail', 'templates', `${templateName}.hbs`),
+      this.config.get<string>('MAIL_TEMPLATES_DIR')
+        ? path.join(this.config.get<string>('MAIL_TEMPLATES_DIR')!, `${templateName}.hbs`)
+        : null,
+    ].filter(Boolean) as string[];
 
-      let source: string;
+    let filePath: string | null = null;
+    for (const p of candidates) {
       try {
-        source = await fs.promises.readFile(filePath, 'utf-8');
-      } catch (err) {
-        throw new InternalServerErrorException(
-          `Не удалось загрузить шаблон: ${templateName}`,
-        );
-      }
+        await fs.promises.access(p, fs.constants.F_OK);
+        filePath = p;
+        break;
+      } catch (_) {}
+    }
 
-      const compiled = handlebars.compile(source);
+    if (!filePath) {
+      this.logger.error(`Template "${templateName}" not found. Tried: ${candidates.join(' | ')}`);
+      throw new InternalServerErrorException(`Не удалось загрузить шаблон: ${templateName}`);
+    }
+
+    // Кэшируем по имени шаблона (можно по пути, если нужно)
+    let compiled = this.templateCache.get(templateName);
+    if (!compiled) {
+      const source = await fs.promises.readFile(filePath, 'utf-8');
+      compiled = handlebars.compile(source);
       this.templateCache.set(templateName, compiled);
     }
 
-    const templateFn = this.templateCache.get(templateName);
-    if (!templateFn) {
-      throw new InternalServerErrorException(
-        `Не найден шаблон: ${templateName}`,
-      );
-    }
-
-    return templateFn(context);
+    return compiled(context);
   }
 }

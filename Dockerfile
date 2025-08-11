@@ -20,7 +20,9 @@ COPY prisma ./prisma
 COPY src ./src
 
 RUN npx prisma generate
-RUN npx --yes @nestjs/cli@^10.0.0 build
+RUN npx --yes @nestjs/cli@^10.0.0 build \
+ && ( [ -d dist/mail/templates ] || (mkdir -p dist/mail/templates && cp -r src/mail/templates/* dist/mail/templates/) )
+
 
 # ---------- Runner ----------
 FROM base AS runner
