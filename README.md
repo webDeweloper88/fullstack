@@ -1,273 +1,297 @@
-# NestJS Auth (JWT + Sessions)
+# NestJS Auth Service
 
-[![NestJS](https://img.shields.io/badge/NestJS-10+-e0234e?logo=nestjs&logoColor=white)](https://nestjs.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org)
-[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)](https://www.prisma.io)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io)
-[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
-[![Swagger](https://img.shields.io/badge/Swagger-OpenAPI-85EA2D?logo=swagger&logoColor=black)](https://dev-auth.domlab.uz/api)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+This is a robust authentication service built with **NestJS**, designed to handle user authentication, session management, OAuth integration, two-factor authentication (2FA), and administrative user/session management. The project uses **Prisma** for database operations, **PostgreSQL** for data storage, **Redis** for token management, and **Nodemailer** for email services.
 
-> **Demo (Swagger, dev):** https://dev-auth.domlab.uz/api
+## Table of Contents
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [API Endpoints](#api-endpoints)
+  - [Auth](#auth)
+  - [Users](#users)
+  - [Sessions](#sessions)
+  - [Admin](#admin)
+  - [Access Logs](#access-logs)
+  - [OAuth](#oauth)
+- [Database Schema](#database-schema)
+- [Roadmap](#roadmap)
 
----
+## Features
+- **User Authentication**:
+  - Registration with email verification.
+  - Login with JWT (access/refresh tokens).
+  - Two-factor authentication (2FA) with QR code support.
+  - Password reset and OAuth password setup.
+- **Session Management**:
+  - Track and manage user sessions (device, IP, location).
+  - Terminate individual or all sessions.
+- **OAuth Integration**:
+  - Google and Yandex OAuth2 support.
+  - Manage connected OAuth accounts.
+- **Admin Features**:
+  - Create, update, block, or delete users.
+  - View and manage all user sessions and access logs.
+- **Access Logs**:
+  - Detailed logging of user actions (login, logout, 2FA, etc.).
+  - Admin filtering by user, event type, or IP.
+- **Security**:
+  - JWT-based authentication with httpOnly cookies for refresh tokens.
+  - Validation pipes for secure DTO handling.
+  - CORS configuration for frontend integration.
+- **Swagger Documentation**:
+  - API documentation available at `/api`.
 
-## ������������ Қисқача тавсиф (UZ)
-NestJS асосидаги аутентификация хизмати: **JWT (access/refresh)**, **сессиялар метаданнолари** (IP/User-Agent) ва **email тасдиқлаш**. Refresh-токенлар **Redis**да TTL билан сақланади, сессиялар рўйхати **PostgreSQL**да. Swagger орқали APIни кўриш ва синаш мумкин.
-
-**Асосий имкониятлар**
-- Рўйхатдан ўтиш ва email тасдиқ (Handlebars шаблонлар)
-- Логин → access (қисқа TTL) + refresh (Redis, TTL)
-- Refresh орқали янгилаш, Logout ва Logout All
-- `GET /users/me` ва сессиялар билан ишлаш (`/users/me/sessions`)
-- **Ихтиёрий:** OAuth (Google/Yandex) — аккаунтга ташқи провайдер орқали кириш
-- Swagger: https://dev-auth.domlab.uz/api
-
----
-
-## Overview (EN)
-Production-ready authentication service built with **NestJS + Prisma + PostgreSQL + Redis**. Supports **email verification**, **JWT access/refresh tokens**, and **session metadata**. API is documented with Swagger.
-
-**Key features**
-- Email verification via Handlebars templates
-- Login with access/refresh tokens; refresh stored in Redis with TTL
-- Token refresh, logout current device, logout all devices
-- Session list & revoke by ID
-- Optional **OAuth (Google/Yandex)** login
-- Clean DTOs & validation; centralized error format (planned)
-
-> **Roadmap:** 2FA (TOTP), rate-limit & brute-force protection, refresh rotation, OAuth account linking & safe disconnect.
-
----
+## Tech Stack
+- **Node.js**: v20+
+- **NestJS**: v10+
+- **Prisma**: ORM for database management
+- **PostgreSQL**: Primary database
+- **Redis**: Token storage
+- **Nodemailer**: Email sending (e.g., verification, password reset)
+- **JWT**: Access and refresh tokens
+- **Swagger**: API documentation
+- **Docker**: Containerized deployment
 
 ## Architecture
+The project follows a modular architecture:
+- **Auth Module**: Handles registration, login, logout, token refresh, email verification, and OAuth.
+- **Users Module**: Manages user profiles, password changes, and 2FA setup.
+- **Sessions Module**: Tracks and manages user sessions.
+- **Admin Module**: Provides admin controls for users and sessions.
+- **Access Logs Module**: Logs user actions for auditing.
+- **Common Module**: Shared utilities and configurations.
+
+**Diagram**:
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    NestJS Application                   │
-│                                                         │
-│  AuthModule   UserModule   SessionModule   MailModule   │
-│     │             │             │             │          │
-│  JWT Service  UserService  SessionService  MailService  │
-│     │             │             │             │          │
-│  Guards/DTOs   Prisma ORM   Prisma ORM     Nodemailer   │
-│     │             │             │             │          │
-│  Access/Refresh Tokens   PostgreSQL (users, sessions)   │
-│                       Redis (refresh TTL)               │
-└─────────────────────────────────────────────────────────┘
+[Frontend] <-> [NestJS API]
+   |              |
+   |              v
+[Redis] <-> [PostgreSQL]
+   |              |
+   v              v
+[Nodemailer]   [Swagger]
 ```
 
-> **Note:** Exact folder names may differ; see `src/` in this repo.
+## Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/webDeweloper88/fullstack
+   cd fullstack
+   ```
+2. Install dependencies:
+   ```bash
+   npm ci
+   ```
+3. Set up environment variables (see [Environment Variables](#environment-variables)).
+4. Generate Prisma client and run migrations:
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev
+   ```
+5. Start the application:
+   ```bash
+   npm run start:dev
+   ```
+6. Access the API at `http://localhost:3000/api` (Swagger UI).
 
----
-
-## Tech stack
-- **Runtime:** Node.js 20, NestJS 10+
-- **DB:** PostgreSQL + Prisma ORM
-- **Cache/Token Store:** Redis (refresh tokens with TTL)
-- **Mail:** Nodemailer + Handlebars templates (verify-email / password-reset)
-- **Docs:** Swagger (OpenAPI)
-- **CI/CD:** GitHub Actions (planned)
-- **Containers:** Docker & docker-compose
-
----
-
-## API (high-level)
-- `POST /auth/register` — create account, send email verification
-- `GET  /auth/verify-email?token=...` — confirm email
-- `POST /auth/login` — get access & refresh tokens
-- `POST /auth/refresh` — renew access via refresh token
-- `POST /auth/logout` — logout current session
-- `POST /auth/logout-all` — revoke all sessions for the user
-- `GET  /users/me` — current user profile
-- `GET  /users/me/sessions` — list sessions
-- `DELETE /users/me/sessions/:id` — revoke a session by ID
-- **(Optional)** `GET /oauth/google` → `GET /oauth/google/callback`
-- **(Optional)** `GET /oauth/yandex` → `GET /oauth/yandex/callback`
-- **(Optional)** `DELETE /oauth/disconnect/:provider`
-
-> Full swagger: https://dev-auth.domlab.uz/api
-
----
-
-## Environment variables
-Create `.env` (or use Docker envs):
-
-```env
-# App
+## Environment Variables
+Create a `.env` file in the root directory with the following variables:
+```
 NODE_ENV=development
-PORT=3000
-
-# Database
-DATABASE_URL=postgresql://user:password@host:5432/dbname?schema=public
-
-# Redis
-REDIS_URL=redis://default:password@host:6379
-
-# JWT (example names — adjust to your project)
-JWT_AT_SECRET=changeme_access_secret
-JWT_AT_TTL=15m
-JWT_RT_SECRET=changeme_refresh_secret
-JWT_RT_TTL=7d
-
-# Mail (Gmail example)
+APP_PORT=3000
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+REDIS_URL=redis://localhost:6379
+JWT_AT_SECRET=your_access_secret
+JWT_RT_SECRET=your_refresh_secret
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=465
-MAIL_SECURE=true
 MAIL_USER=your@gmail.com
 MAIL_PASS=your_app_password
-MAIL_FROM=Your App <your@gmail.com>
-
-# App URLs
-APP_BASE_URL=http://localhost:3000
-CLIENT_BASE_URL=http://localhost:5173
-EMAIL_VERIFY_URL=${CLIENT_BASE_URL}/auth/verify-email
-PASSWORD_RESET_URL=${CLIENT_BASE_URL}/auth/reset-password
-
-# --- OAuth (Google) ---
+CORS_ORIGIN=http://localhost:5173
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-# e.g. http://localhost:3000/oauth/google/callback or https://dev-auth.domlab.uz/oauth/google/callback
-GOOGLE_REDIRECT_URI=${APP_BASE_URL}/oauth/google/callback
-# Scopes are usually managed in code; keep for clarity if needed
-GOOGLE_SCOPE="openid email profile"
-
-# --- OAuth (Yandex) ---
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/oauth/google/callback
 YANDEX_CLIENT_ID=your_yandex_client_id
 YANDEX_CLIENT_SECRET=your_yandex_client_secret
-# e.g. http://localhost:3000/oauth/yandex/callback or https://dev-auth.domlab.uz/oauth/yandex/callback
-YANDEX_REDIRECT_URI=${APP_BASE_URL}/oauth/yandex/callback
-# Yandex scopes example
-YANDEX_SCOPE="login:email"
+YANDEX_REDIRECT_URI=http://localhost:3000/auth/oauth/yandex/callback
 ```
 
----
+## API Endpoints
+All endpoints are documented via Swagger at `/api`. Below is a summary of key endpoints.
 
-## OAuth setup (Google & Yandex)
-**Google**
-1. Go to Google Cloud Console → APIs & Services → OAuth consent screen (External) → add test users (dev).
-2. Create Credentials → **OAuth client ID** → Application type: **Web application**.
-3. Add **Authorized redirect URIs**:  
-   - `http://localhost:3000/oauth/google/callback`  
-   - `https://dev-auth.domlab.uz/oauth/google/callback` (dev)  
-   - `https://auth.domlab.uz/oauth/google/callback` (prod, if applicable)
-4. Put values into `.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
+### Auth
+- **POST /auth/register**: Register a new user.
+  - Body: `{ email, password, displayName }`
+  - Response: 201 (Verification email sent)
+- **GET /auth/verify-email?token=...**: Verify email with token.
+  - Response: 200 (Email verified), 400 (Already verified), 404 (Invalid token)
+- **POST /auth/resend-verification**: Resend verification email.
+  - Body: `{ email }`
+  - Response: 200 (Email sent), 400 (Already verified), 404 (User not found)
+- **POST /auth/login**: Log in user and return tokens.
+  - Body: `{ email, password, client }`
+  - Response: 200 (Access/refresh tokens), 401 (Invalid credentials or 2FA required)
+- **PATCH /auth/logout**: Log out and invalidate session.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: 200 (Logged out)
+- **POST /auth/refresh**: Refresh access token using refresh token.
+  - Headers: `Authorization: Bearer <refresh_token>`
+  - Response: 200 (New access token)
+- **POST /auth/set-password**: Set password for OAuth users.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Body: `{ password }`
+  - Response: 200 (Password set)
 
-**Yandex**
-1. Go to Yandex OAuth (oauth.yandex.ru) → Create application (Веб‑сервисы).
-2. Add **Redirect URI**:  
-   - `http://localhost:3000/oauth/yandex/callback`  
-   - `https://dev-auth.domlab.uz/oauth/yandex/callback`  
-   - `https://auth.domlab.uz/oauth/yandex/callback` (prod, if applicable)
-3. Choose scope(s), at minimum: `login:email`.
-4. Put values into `.env`: `YANDEX_CLIENT_ID`, `YANDEX_CLIENT_SECRET`, `YANDEX_REDIRECT_URI`.
+### Users
+- **GET /user/profile**: Get current user profile.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: `{ id, email, displayName, pictureUrl, role, accountStatus, createdAt, updatedAt }`
+- **PATCH /user/update-profile**: Update user profile.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Body: `{ displayName, pictureUrl }`
+  - Response: Updated profile
+- **PATCH /user/me/change-password**: Change user password.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Body: `{ currentPassword, newPassword }`
+  - Response: 200 (Password changed), 400 (Invalid current password)
+- **GET /user/me/access-logs**: Get user access logs.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: Array of logs `{ id, eventType, ipAddress, userAgent, createdAt }`
+- **POST /user/me/2fa/setup**: Set up 2FA (returns QR code and secret).
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: `{ qrCodeImage, secret }`
+- **POST /user/me/2fa/verify**: Verify 2FA setup.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Body: `{ token, secret }`
+  - Response: 200 (2FA enabled)
 
-> Ensure your Nest strategies use these env vars and the callback routes above. Adjust if your routes differ.
+### Sessions
+- **GET /users/me/sessions**: Get current user sessions.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: Array of sessions `{ id, device, ipAddress, location, lastActive, expiresAt, isCurrent }`
+- **DELETE /users/me/sessions**: Terminate all sessions except current.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: 204 (Sessions terminated)
+- **DELETE /users/me/sessions/all**: Terminate all sessions including current.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: 204 (Sessions terminated)
+- **DELETE /users/me/sessions/{id}**: Terminate specific session.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: 204 (Session terminated)
 
----
+### Admin
+- **POST /admin/users/create-user-by-admin**: Create a new user (admin only).
+  - Headers: `Authorization: Bearer <access_token>`
+  - Body: `{ email, hash, displayName, pictureUrl, role, accountStatus }`
+  - Response: 200 (User created), 403 (Forbidden), 409 (User exists)
+- **GET /admin/users/find-all**: List users with filters and pagination.
+  - Query: `?role=user|admin&status=PENDING|ACTIVE|BLOCKED|DELETED&email=...&page=1&limit=10`
+  - Response: List of users
+- **GET /admin/users/find-by-id/{id}**: Get user by ID.
+  - Response: User profile or 204 (Not found)
+- **PATCH /admin/users/update-by-admin/{id}**: Update user role/status.
+  - Body: `{ role, accountStatus }`
+  - Response: Updated profile
+- **DELETE /admin/users/delete-by-admin/{id}**: Mark user as deleted.
+  - Response: 200 (User marked deleted)
+- **PATCH /admin/users/users/{id}/block**: Block user.
+  - Response: 200 (User blocked)
+- **PATCH /admin/users/users/{id}/unblock**: Unblock user.
+  - Response: 200 (User unblocked)
+- **GET /admin/sessions**: List all sessions with filters.
+  - Query: `?page=1&limit=10&ipAddress=...&device=...&userId=...`
+  - Response: List of sessions
+- **DELETE /admin/sessions**: Delete all sessions (use with caution).
+  - Response: 200 (Sessions deleted)
+- **GET /admin/sessions/user/{userId}**: Get sessions for a user.
+  - Response: List of sessions
+- **DELETE /admin/sessions/user/{userId}**: Delete all sessions for a user.
+  - Response: 200 (Sessions deleted)
+- **DELETE /admin/sessions/{id}**: Delete specific session.
+  - Response: 204 (Session deleted)
 
-## Local development
-**Prerequisites:** Node.js 20+, npm, Docker (optional), PostgreSQL & Redis.
+### Access Logs
+- **GET /access-log**: Get access logs (admin only).
+  - Query: `?userId=...&eventType=REGISTER|LOGIN_SUCCESS|...&ipAddress=...&page=1&limit=20`
+  - Response: List of logs `{ id, eventType, ipAddress, userAgent, createdAt }`
+- **GET /user/{id}/access-logs**: Get access logs for a specific user (admin only).
+  - Response: List of logs
 
-```bash
-# 1) Install deps
-npm ci
+### OAuth
+- **GET /auth/oauth/google**: Redirect to Google OAuth.
+- **GET /auth/oauth/yandex**: Redirect to Yandex OAuth.
+- **GET /auth/oauth/google/callback**: Google OAuth callback (returns access token).
+- **GET /auth/oauth/yandex/callback**: Yandex OAuth callback (returns access token).
+- **DELETE /auth/oauth/disconnect/{provider}**: Disconnect OAuth account.
+  - Headers: `Authorization: Bearer <access_token>`
+  - Response: 200 (Disconnected), 400 (Last login method), 404 (Account not found)
+- **GET /auth/oauth/accounts**: List connected OAuth accounts.
+  - Query: `?provider=google&page=1&limit=10`
+  - Response: List of accounts
 
-# 2) Generate Prisma client
-npx prisma generate
+## Database Schema
+The database is managed by **Prisma** with **PostgreSQL**. Below are the main models:
 
-# 3) Migrate DB (creates tables)
-npx prisma migrate dev
+### User
+- `id`: UUID (primary key)
+- `email`: Unique string
+- `displayName`: String (optional)
+- `pictureUrl`: String (optional, typo in schema: `picktureUrl`)
+- `hash`: Password hash
+- `hashRt`: Refresh token hash
+- `role`: Enum (user, admin)
+- `accountStatus`: Enum (PENDING, ACTIVE, BLOCKED, DELETED)
+- `emailVerified`: Boolean
+- `emailVerificationToken`: String (optional)
+- `emailVerificationTokenExpiresAt`: DateTime (optional)
+- `resetPasswordToken`: String (optional)
+- `resetPasswordExpiresAt`: DateTime (optional)
+- `twoFactorEnabled`: Boolean
+- `twoFactorSecret`: String (optional)
+- `twoFactorExpiresAt`: DateTime (optional)
+- `createdAt`, `updatedAt`: DateTime
+- Relations: `AccessLog[]`, `Session[]`, `OAuthAccount[]`
 
-# 4) Run the app (watch)
-npm run start:dev
+### Session
+- `id`: UUID (primary key)
+- `userId`: Foreign key to User
+- `ipAddress`: String
+- `userAgent`: String (optional)
+- `device`: String (optional, e.g., "Windows 10 · Chrome")
+- `client`: String (optional, e.g., "web", "mobile")
+- `location`: String (optional, e.g., "Tashkent, Uzbekistan")
+- `createdAt`, `updatedAt`, `expiresAt`: DateTime
+- Relation: `User`
 
-# 5) Open Swagger
-# http://localhost:3000/api
-```
+### AccessLog
+- `id`: UUID (primary key)
+- `userId`: Foreign key to User
+- `eventType`: Enum (REGISTER, LOGIN_SUCCESS, LOGIN_FAIL, etc.)
+- `ipAddress`: String (optional)
+- `userAgent`: String (optional)
+- `createdAt`: DateTime
+- Relation: `User`
 
-### Using Docker Compose
-If you prefer containers, the repo includes `docker-compose.yml`:
+### OAuthAccount
+- `id`: UUID (primary key)
+- `provider`: String (e.g., "google", "yandex")
+- `providerId`: String (provider's user ID)
+- `email`: String (optional)
+- `accessToken`: String (optional)
+- `refreshToken`: String (optional)
+- `userId`: Foreign key to User
+- `createdAt`, `updatedAt`: DateTime
+- Relation: `User`
 
-```bash
-# Build & run (detached)
-docker compose up -d --build
+### Enums
+- `UserRole`: user, admin
+- `AccountStatus`: PENDING, ACTIVE, BLOCKED, DELETED
+- `LogEventType`: REGISTER, LOGIN_SUCCESS, LOGIN_FAIL, EMAIL_VERIFIED, EMAIL_RESEND, EMAIL_FAILED, PASSWORD_CHANGED, ACCOUNT_BLOCKED, ACCOUNT_UNLOCKED, LOGIN_2FA_REQUIRED, ENABLE_2FA, DISABLE_2FA, LOGOUT, LOGIN_OAUTH_SUCCESS, LOGIN_OAUTH_FAIL, OAUTH_DISCONNECT, PASSWORD_SET_OAUTH_SUCCESS
 
-# Follow logs
-docker compose logs -f api
-```
-
-> Ensure `.env` is configured before starting the API container.
-
----
-
-## Email templates
-- Templates live under `src/mail/templates` and are copied to `dist` via `nest-cli.json` assets.
-- Example files: `verify-email.hbs`, `password-reset.hbs`.
-- In production the app resolves templates from `dist/mail/templates` (falls back to `src` in dev).
-
----
-
-## Security checklist
-- [ ] Store refresh tokens ONLY in Redis with TTL
-- [ ] Consider **httpOnly + Secure cookies** for refresh tokens
-- [ ] Add **rate limiting** to `/auth/login` and `/auth/refresh`
-- [ ] Implement **brute-force** protection (IP/username throttling)
-- [ ] Use **argon2/bcrypt** for password hashing
-- [ ] Enforce strong password policy & validation
-- [ ] Rotate secrets & never commit `.env`
-- [ ] Enable CORS with allowlist
-- [ ] Safe OAuth linking/unlink (do not allow removal of the last auth method)
-
----
-
-## Project scripts
-```json
-{
-  "scripts": {
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:prod": "node dist/main.js",
-    "build": "nest build",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
-  }
-}
-```
-
----
-
-## Folder structure (excerpt)
-```
-├─ prisma/                  # schema.prisma, migrations
-├─ src/
-│  ├─ auth/                 # controllers, services, strategies, guards
-│  ├─ users/
-│  ├─ sessions/
-│  ├─ mail/                 # MailService, templates (.hbs)
-│  ├─ common/               # dto, pipes, filters (if applicable)
-│  └─ main.ts
-├─ docker-compose.yml
-├─ Dockerfile
-├─ nest-cli.json
-└─ README.md
-```
-> Note: Module/folder names may differ; adjust to your actual layout.
-
----
-
-## Contributing
-PRs and suggestions are welcome — especially around security hardening, DTO design, and refresh rotation.
-
----
-
-## License
-MIT — see [LICENSE](./LICENSE). Adjust if you prefer a different license.
-
----
-
-## Credits
-Built by **webDeweloper88**. Feedback is welcome in the NestJS community.
+## Roadmap
+- Implement rate-limiting for brute-force protection.
+- Add refresh token rotation for enhanced security.
+- Support additional OAuth providers (e.g., GitHub).
+- Enhance admin dashboard with analytics for access logs.
