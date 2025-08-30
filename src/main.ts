@@ -43,15 +43,15 @@ async function bootstrap() {
     //   credentials: true,
     // });
     app.enableCors({
-  // Включение CORS с поддержкой нескольких источников
-  origin: (origin, callback) => {
-    const allowedOrigins = configService.getOrThrow<string>('CORS_ORIGIN').split(',');
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+    // Включение CORS с поддержкой нескольких источников
+      origin: (origin, callback) => {
+        const allowedOrigins = configService.getOrThrow<string>('CORS_ORIGIN').split(',');
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+    },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
 });
