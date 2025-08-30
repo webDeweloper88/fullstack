@@ -36,12 +36,25 @@ async function bootstrap() {
       }),
     );
 
+    // app.enableCors({
+    //   // CORS sozlamalarini yoqish
+    //   origin: configService.getOrThrow<string>('CORS_ORIGIN'),
+    //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    //   credentials: true,
+    // });
     app.enableCors({
-      // CORS sozlamalarini yoqish
-      origin: configService.getOrThrow<string>('CORS_ORIGIN'),
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-      credentials: true,
-    });
+  // Включение CORS с поддержкой нескольких источников
+  origin: (origin, callback) => {
+    const allowedOrigins = configService.getOrThrow<string>('CORS_ORIGIN').split(',');
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+});
 
     app.use(cookieParser());
 
