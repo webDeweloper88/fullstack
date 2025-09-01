@@ -43,18 +43,20 @@ async function bootstrap() {
     //   credentials: true,
     // });
     app.enableCors({
-    // Включение CORS с поддержкой нескольких источников
+      // Включение CORS с поддержкой нескольких источников
       origin: (origin, callback) => {
-        const allowedOrigins = configService.getOrThrow<string>('CORS_ORIGIN').split(',');
+        const allowedOrigins = configService
+          .getOrThrow<string>('CORS_ORIGIN')
+          .split(',');
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           callback(new Error('Not allowed by CORS'));
         }
-    },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-});
+      },
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      credentials: true,
+    });
 
     app.use(cookieParser());
 
@@ -115,7 +117,7 @@ async function bootstrap() {
       },
     });
 
-    await app.listen(port); // Ilovani belgilangan portda ishga tushirish
+    await app.listen(Number(process.env.APP_PORT ?? 3000), '0.0.0.0'); // Ilovani belgilangan portda ishga tushirish
     console.log(`Application is running on: http://localhost:${port}/api`); // Ilova ishga tushirilganda konsolga chiqarish
     console.log(
       `Cors_Orign : ${configService.getOrThrow<string>('CORS_ORIGIN')}`, // CORS origin konfiguratsiyasini konsolga chiqarish
