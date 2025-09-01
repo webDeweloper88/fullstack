@@ -1,19 +1,32 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
-export class RedisService implements OnModuleInit {
+export class RedisService implements OnModuleInit, OnModuleDestroy {
   private redisClient: Redis;
 
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
-    this.redisClient = new Redis({
-      host: this.configService.get<string>('REDIS_HOST'),
-      port: this.configService.get<number>('REDIS_PORT'),
-      password: this.configService.get<string>('REDIS_PASSWORD'),
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+    if (!redisUrl) {
+      throw new Error('REDIS_URL is not defined in environment variables');
+    }
+
+    this.redisClient = new Redis(redisUrl);
+
+    this.redisClient.on('connect', () => {
+      console.log(`✅ Redis connected: ${redisUrl}`);
     });
+
+    this.redisClient.on('error', (err) => {
+      console.error('❌ Redis error:', err.message);
+    });
+  }
+
+  async onModuleDestroy() {
+    await this.redisClient.quit();
   }
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
